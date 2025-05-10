@@ -49,7 +49,6 @@ htmlcov/
 # Distribution / packaging
 .Python
 *.manifest
-*.spec
 
 # Logs and databases
 *.log
