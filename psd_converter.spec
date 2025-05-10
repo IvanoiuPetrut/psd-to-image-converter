@@ -7,15 +7,17 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 block_cipher = None
 
 # Get the absolute path to the src directory
-src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'src'))
+src_path = os.path.abspath('src')
 
 # Collect all data files from src directory
+# Only include non-Python resource files
+resource_exts = ('.ico', '.png')
 datas = []
 for root, dirs, files in os.walk(src_path):
     for file in files:
-        if file.endswith(('.py', '.ico', '.png')):
+        if file.endswith(resource_exts):
             full_path = os.path.join(root, file)
-            rel_path = os.path.relpath(full_path, os.path.dirname(__file__))
+            rel_path = os.path.relpath(full_path, os.path.dirname(os.path.abspath('.')))
             datas.append((rel_path, os.path.dirname(rel_path)))
 
 # Collect all hidden imports
@@ -28,7 +30,7 @@ hidden_imports = [
 ]
 
 a = Analysis(
-    ['src/main.py'],  # Changed to use the new main entry point
+    ['src/gui/app.py'],  # Changed to use the new main entry point
     pathex=[src_path],  # Add src directory to path
     binaries=[],
     datas=datas,
