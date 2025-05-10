@@ -160,15 +160,26 @@ def get_file_creation_date_str(psd_file_path):
         # Ultimate fallback if everything else fails (e.g., permissions issues)
         return datetime.now().strftime("%Y-%m-%d_%H%M%S") + "_fallback"
 
-def convert_psd_to_image(psd_path, output_dir, output_format, filename_base):
+def convert_psd_to_image(psd_path, output_dir, output_settings, filename_base):
     """
     Converts a single PSD file to the specified image format.
     Handles filename collisions by appending a counter.
     """
     try:
-        # Open the PSD file with Pillow (which psd-tools uses under the hood for layers)
-        # For direct conversion, Pillow's Image.open can often handle PSDs directly.
+        # Open the PSD file
         image = Image.open(psd_path)
+        
+        if output_settings.detailed_output:
+            print(f"  Original image size: {image.width}x{image.height}")
+            print(f"  Image mode: {image.mode}")
+
+        # Apply scaling if needed
+        if output_settings.scale != 100:
+            new_width = int(image.width * output_settings.scale / 100)
+            new_height = int(image.height * output_settings.scale / 100)
+            image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            if output_settings.detailed_output:
+                print(f"  Scaled to: {new_width}x{new_height}")
 
         # Ensure the output directory exists
         if not os.path.exists(output_dir):
@@ -176,66 +187,100 @@ def convert_psd_to_image(psd_path, output_dir, output_format, filename_base):
             print(f"Created output directory: {output_dir}")
 
         # Determine output filename and handle potential collisions
-        base_output_filename = f"{filename_base}.{output_format.lower()}"
+        base_output_filename = f"{filename_base}.{output_settings.format.lower()}"
         output_path = os.path.join(output_dir, base_output_filename)
         
         counter = 1
         while os.path.exists(output_path):
-            # If file exists, append a counter to the base name (before extension)
             new_filename_base = f"{filename_base}_{counter}"
-            output_filename_with_counter = f"{new_filename_base}.{output_format.lower()}"
+            output_filename_with_counter = f"{new_filename_base}.{output_settings.format.lower()}"
             output_path = os.path.join(output_dir, output_filename_with_counter)
             counter += 1
         
         final_output_filename = os.path.basename(output_path)
 
-        print(f"  Converting '{os.path.basename(psd_path)}' to '{final_output_filename}' as {output_format.upper()}...")
+        print(f"  Converting '{os.path.basename(psd_path)}' to '{final_output_filename}' as {output_settings.format.upper()}...")
 
         # Handle transparency and color modes
-        if output_format.lower() in ['png', 'webp']:
-            # If image has an alpha channel, it should be preserved.
-            # Convert to RGBA if in palette mode (P, PA) for better compatibility.
+        if output_settings.format.lower() in ['png', 'webp']:
             if image.mode in ('P', 'PA') and 'transparency' in image.info:
                 image = image.convert("RGBA")
-            elif image.mode not in ('RGBA', 'LA') : # If not already with Alpha, ensure it's RGBA for safety
-                 # This conversion might add an opaque alpha if one didn't exist.
-                 # If the original was RGB, it remains RGB for PNG unless explicitly converted.
-                 # PNGs save alpha if the mode is RGBA or LA.
-                 pass # Pillow handles this well for PNG/WebP based on image.mode
+                if output_settings.detailed_output:
+                    print("  Converted palette image with transparency to RGBA")
+            elif image.mode not in ('RGBA', 'LA'):
+                pass
 
-        elif output_format.lower() in ['jpg', 'jpeg']:
-            # JPEG does not support transparency, convert to RGB.
-            if image.mode in ['RGBA', 'LA', 'P', 'PA']: # P/PA might have transparency
-                # Create a new image with a white background then paste the image onto it
+        elif output_settings.format.lower() in ['jpg', 'jpeg']:
+            if image.mode in ['RGBA', 'LA', 'P', 'PA']:
                 background = Image.new("RGB", image.size, (255, 255, 255))
                 try:
-                    # If image has alpha, use it as mask for pasting
                     background.paste(image, mask=image.split()[-1] if image.mode in ['RGBA', 'LA', 'PA'] else None)
-                except IndexError: # Happens if image.split()[-1] is not an alpha channel
+                except IndexError:
                     background.paste(image)
-
                 image = background
-            elif image.mode == 'CMYK': # Convert CMYK to RGB for JPG
+                if output_settings.detailed_output:
+                    print("  Converted image with transparency to RGB with white background")
+            elif image.mode == 'CMYK':
                 image = image.convert('RGB')
+                if output_settings.detailed_output:
+                    print("  Converted CMYK to RGB")
 
-
-        # Save the image in the chosen format
-        if output_format.lower() == 'webp':
-            image.save(output_path, format='WEBP', quality=85, lossless=False) # Adjust quality/lossless as needed
-        elif output_format.lower() in ['jpg', 'jpeg']:
-            image.save(output_path, format='JPEG', quality=90, optimize=True) # Adjust quality
-        elif output_format.lower() == 'png':
-            image.save(output_path, format='PNG', optimize=True)
+        # Save the image with appropriate settings
+        save_kwargs = {}
+        
+        if output_settings.format.lower() == 'webp':
+            save_kwargs.update({
+                'format': 'WEBP',
+                'quality': output_settings.quality,
+                'lossless': output_settings.lossless,
+                'optimize': output_settings.optimize
+            })
+            if output_settings.detailed_output:
+                print(f"  WebP settings: quality={output_settings.quality}, lossless={output_settings.lossless}, optimize={output_settings.optimize}")
+        elif output_settings.format.lower() in ['jpg', 'jpeg']:
+            save_kwargs.update({
+                'format': 'JPEG',
+                'quality': output_settings.quality,
+                'optimize': output_settings.optimize
+            })
+            if output_settings.detailed_output:
+                print(f"  JPEG settings: quality={output_settings.quality}, optimize={output_settings.optimize}")
+        elif output_settings.format.lower() == 'png':
+            save_kwargs.update({
+                'format': 'PNG',
+                'optimize': output_settings.optimize
+            })
+            if output_settings.detailed_output:
+                print(f"  PNG settings: optimize={output_settings.optimize}")
+        elif output_settings.format.lower() == 'bmp':
+            save_kwargs.update({
+                'format': 'BMP'
+            })
+            if output_settings.detailed_output:
+                print("  BMP format selected (no additional settings)")
+        elif output_settings.format.lower() == 'tiff':
+            save_kwargs.update({
+                'format': 'TIFF',
+                'compression': 'tiff_lzw' if output_settings.optimize else None
+            })
+            if output_settings.detailed_output:
+                print(f"  TIFF settings: compression={'LZW' if output_settings.optimize else 'None'}")
         else:
-            print(f"    Unsupported output format '{output_format}' for saving. Skipping.")
+            print(f"    Unsupported output format '{output_settings.format}' for saving. Skipping.")
             return False
 
+        image.save(output_path, **save_kwargs)
+        
+        if output_settings.detailed_output:
+            file_size = os.path.getsize(output_path) / 1024  # Size in KB
+            print(f"  Saved file size: {file_size:.1f} KB")
+            
         print(f"  Successfully converted and saved to '{output_path}'")
         return True
 
     except FileNotFoundError:
         print(f"  Error: PSD file not found at '{psd_path}'")
-    except UnidentifiedImageError: # From Pillow
+    except UnidentifiedImageError:
         print(f"  Error: Cannot identify image file. '{psd_path}' might be corrupted or not a valid PSD.")
     except Exception as e:
         print(f"  Error converting '{os.path.basename(psd_path)}': {e}")

@@ -4,53 +4,158 @@ import os
 from main import convert_psd_to_image, get_file_creation_date_str, ensure_dependencies
 from PIL import Image, ImageTk
 
+# Color scheme for dark theme
+COLORS = {
+    'bg': '#1e1e1e',
+    'fg': '#e0e0e0',
+    'accent': '#007acc',
+    'button': '#2d2d2d',
+    'button_hover': '#3d3d3d',
+    'entry': '#2d2d2d',
+    'listbox': '#2d2d2d',
+    'text': '#2d2d2d',
+    'progress': '#007acc',
+    'border': '#2d2d2d'
+}
+
+class OutputSettings:
+    def __init__(self):
+        self.format = "png"
+        self.quality = 90
+        self.scale = 100
+        self.lossless = False
+        self.optimize = True
+        self.detailed_output = False
+
 class PSDConverterGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("PSD to Image Converter")
         self.root.geometry("800x600")
+        self.output_settings = OutputSettings()
         
-        # Set application icon for both window and taskbar
+        # Configure root window background
+        self.root.configure(bg=COLORS['bg'])
+        
+        self._setup_icon()
+        self._setup_styles()
+        self._create_widgets()
+        
+        # Initialize source paths list
+        self.source_paths = []
+        
+        # Ensure dependencies are installed
+        ensure_dependencies()
+
+    def _setup_icon(self):
         try:
-            # Try to load icon from the same directory as the script
             icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.ico")
             if os.path.exists(icon_path):
-                # This sets both window and taskbar icon on Windows
                 self.root.iconbitmap(icon_path)
             else:
-                # If .ico not found, try .png
                 icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.png")
                 if os.path.exists(icon_path):
-                    # Load and resize the image to ensure proper taskbar display
                     icon_image = Image.open(icon_path)
-                    # Resize to common taskbar icon sizes
                     icon_sizes = [(16, 16), (32, 32), (48, 48), (64, 64)]
                     icon_photos = []
                     for size in icon_sizes:
                         resized = icon_image.resize(size, Image.Resampling.LANCZOS)
                         icon_photos.append(ImageTk.PhotoImage(resized))
-                    # Set the icon for both window and taskbar
                     self.root.iconphoto(True, *icon_photos)
-                    # Store references to prevent garbage collection
                     self.icon_photos = icon_photos
         except Exception as e:
             print(f"Could not load icon: {e}")
-        
-        # Configure style
+
+    def _setup_styles(self):
         style = ttk.Style()
-        style.configure("TButton", padding=6, relief="flat", background="#ccc")
-        style.configure("TLabel", padding=6)
-        style.configure("TFrame", padding=10)
+        style.theme_use('clam')
         
+        # Configure colors for different widgets
+        style.configure("TFrame", 
+            background=COLORS['bg'],
+            borderwidth=1,
+            relief="flat")
+            
+        style.configure("TLabelframe", 
+            background=COLORS['bg'], 
+            foreground=COLORS['fg'],
+            borderwidth=1,
+            bordercolor=COLORS['border'])
+            
+        style.configure("TLabelframe.Label", 
+            background=COLORS['bg'], 
+            foreground=COLORS['fg'])
+        
+        style.configure("TButton",
+            padding=6,
+            relief="flat",
+            background=COLORS['button'],
+            foreground=COLORS['fg'],
+            borderwidth=1,
+            bordercolor=COLORS['border'])
+            
+        style.map("TButton",
+            background=[('active', COLORS['button_hover'])],
+            foreground=[('active', COLORS['fg'])],
+            bordercolor=[('active', COLORS['accent'])])
+        
+        style.configure("TLabel",
+            padding=6,
+            background=COLORS['bg'],
+            foreground=COLORS['fg'])
+        
+        style.configure("TEntry",
+            fieldbackground=COLORS['entry'],
+            foreground=COLORS['fg'],
+            insertcolor=COLORS['fg'],
+            borderwidth=1,
+            bordercolor=COLORS['border'])
+        
+        style.configure("TCombobox",
+            fieldbackground=COLORS['entry'],
+            background=COLORS['button'],
+            foreground=COLORS['fg'],
+            arrowcolor=COLORS['fg'],
+            borderwidth=1,
+            bordercolor=COLORS['border'])
+            
+        style.map("TCombobox",
+            fieldbackground=[('readonly', COLORS['entry'])],
+            selectbackground=[('readonly', COLORS['accent'])],
+            selectforeground=[('readonly', COLORS['fg'])],
+            bordercolor=[('readonly', COLORS['border'])])
+        
+        style.configure("Horizontal.TProgressbar",
+            background=COLORS['progress'],
+            troughcolor=COLORS['button'],
+            borderwidth=0)
+
+    def _create_widgets(self):
         # Create main frame
-        main_frame = ttk.Frame(root)
+        main_frame = ttk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         # Source paths section
-        source_frame = ttk.LabelFrame(main_frame, text="Source Files/Folders")
+        self._create_source_section(main_frame)
+        
+        # Output settings section
+        self._create_output_section(main_frame)
+        
+        # Progress section
+        self._create_progress_section(main_frame)
+        
+        # Control buttons
+        self._create_control_buttons(main_frame)
+
+    def _create_source_section(self, parent):
+        source_frame = ttk.LabelFrame(parent, text="Source Files/Folders")
         source_frame.pack(fill=tk.X, pady=5)
         
-        self.source_listbox = tk.Listbox(source_frame, height=5)
+        self.source_listbox = tk.Listbox(source_frame, height=5,
+            bg=COLORS['listbox'],
+            fg=COLORS['fg'],
+            selectbackground=COLORS['accent'],
+            selectforeground=COLORS['fg'])
         self.source_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         source_buttons_frame = ttk.Frame(source_frame)
@@ -59,9 +164,9 @@ class PSDConverterGUI:
         ttk.Button(source_buttons_frame, text="Add File", command=self.add_file).pack(pady=2)
         ttk.Button(source_buttons_frame, text="Add Folder", command=self.add_folder).pack(pady=2)
         ttk.Button(source_buttons_frame, text="Remove", command=self.remove_source).pack(pady=2)
-        
-        # Output settings section
-        output_frame = ttk.LabelFrame(main_frame, text="Output Settings")
+
+    def _create_output_section(self, parent):
+        output_frame = ttk.LabelFrame(parent, text="Output Settings")
         output_frame.pack(fill=tk.X, pady=5)
         
         # Output directory
@@ -74,39 +179,95 @@ class PSDConverterGUI:
         self.output_dir_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
         ttk.Button(output_dir_frame, text="Browse", command=self.select_output_dir).pack(side=tk.RIGHT, padx=5)
         
-        # Output format
+        # Format settings
         format_frame = ttk.Frame(output_frame)
         format_frame.pack(fill=tk.X, padx=5, pady=5)
-        ttk.Label(format_frame, text="Output Format:").pack(side=tk.LEFT)
-        self.format_var = tk.StringVar(value="png")
-        formats = ["png", "jpg", "webp"]
-        format_combo = ttk.Combobox(format_frame, textvariable=self.format_var, values=formats, state="readonly")
-        format_combo.pack(side=tk.LEFT, padx=5)
         
-        # Progress section
-        progress_frame = ttk.LabelFrame(main_frame, text="Progress")
+        # Format selection
+        ttk.Label(format_frame, text="Format:").pack(side=tk.LEFT)
+        self.format_var = tk.StringVar(value="png")
+        formats = ["png", "jpg", "webp", "bmp", "tiff"]
+        format_combo = ttk.Combobox(format_frame, textvariable=self.format_var, values=formats, state="readonly", width=10)
+        format_combo.pack(side=tk.LEFT, padx=5)
+        format_combo.bind('<<ComboboxSelected>>', self._on_format_change)
+        
+        # Quality slider
+        quality_frame = ttk.Frame(output_frame)
+        quality_frame.pack(fill=tk.X, padx=5, pady=5)
+        ttk.Label(quality_frame, text="Quality:").pack(side=tk.LEFT)
+        self.quality_var = tk.IntVar(value=90)
+        quality_scale = ttk.Scale(quality_frame, from_=1, to=100, orient=tk.HORIZONTAL, 
+                                variable=self.quality_var, length=200)
+        quality_scale.pack(side=tk.LEFT, padx=5)
+        self.quality_label = ttk.Label(quality_frame, text="90%")
+        self.quality_label.pack(side=tk.LEFT)
+        quality_scale.bind('<Motion>', self._update_quality_label)
+        
+        # Scale settings
+        scale_frame = ttk.Frame(output_frame)
+        scale_frame.pack(fill=tk.X, padx=5, pady=5)
+        ttk.Label(scale_frame, text="Scale:").pack(side=tk.LEFT)
+        self.scale_var = tk.IntVar(value=100)
+        scale_scale = ttk.Scale(scale_frame, from_=1, to=200, orient=tk.HORIZONTAL,
+                              variable=self.scale_var, length=200)
+        scale_scale.pack(side=tk.LEFT, padx=5)
+        self.scale_label = ttk.Label(scale_frame, text="100%")
+        self.scale_label.pack(side=tk.LEFT)
+        scale_scale.bind('<Motion>', self._update_scale_label)
+        
+        # Add reset scale button
+        ttk.Button(scale_frame, text="Reset Scale", command=self._reset_scale).pack(side=tk.LEFT, padx=5)
+        
+        # Additional options
+        options_frame = ttk.Frame(output_frame)
+        options_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        self.lossless_var = tk.BooleanVar(value=False)
+        self.optimize_var = tk.BooleanVar(value=True)
+        self.detailed_output_var = tk.BooleanVar(value=False)
+        
+        ttk.Checkbutton(options_frame, text="Lossless", variable=self.lossless_var).pack(side=tk.LEFT, padx=5)
+        ttk.Checkbutton(options_frame, text="Optimize", variable=self.optimize_var).pack(side=tk.LEFT, padx=5)
+        ttk.Checkbutton(options_frame, text="Detailed Output", variable=self.detailed_output_var).pack(side=tk.LEFT, padx=5)
+
+    def _create_progress_section(self, parent):
+        progress_frame = ttk.LabelFrame(parent, text="Progress")
         progress_frame.pack(fill=tk.BOTH, expand=True, pady=5)
         
         self.progress_var = tk.DoubleVar()
         self.progress_bar = ttk.Progressbar(progress_frame, variable=self.progress_var, maximum=100)
         self.progress_bar.pack(fill=tk.X, padx=5, pady=5)
         
-        self.status_text = tk.Text(progress_frame, height=10, wrap=tk.WORD)
+        self.status_text = tk.Text(progress_frame, height=10, wrap=tk.WORD,
+            bg=COLORS['text'],
+            fg=COLORS['fg'],
+            insertbackground=COLORS['fg'])
         self.status_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        # Control buttons
-        control_frame = ttk.Frame(main_frame)
+
+    def _create_control_buttons(self, parent):
+        control_frame = ttk.Frame(parent)
         control_frame.pack(fill=tk.X, pady=10)
         
         ttk.Button(control_frame, text="Start Conversion", command=self.start_conversion).pack(side=tk.RIGHT, padx=5)
         ttk.Button(control_frame, text="Clear All", command=self.clear_all).pack(side=tk.RIGHT, padx=5)
-        
-        # Initialize source paths list
-        self.source_paths = []
-        
-        # Ensure dependencies are installed
-        ensure_dependencies()
-    
+
+    def _on_format_change(self, event=None):
+        format = self.format_var.get()
+        if format in ['png', 'webp']:
+            self.lossless_var.set(True)
+        else:
+            self.lossless_var.set(False)
+
+    def _update_quality_label(self, event=None):
+        self.quality_label.config(text=f"{self.quality_var.get()}%")
+
+    def _update_scale_label(self, event=None):
+        self.scale_label.config(text=f"{self.scale_var.get()}%")
+
+    def _reset_scale(self):
+        self.scale_var.set(100)
+        self._update_scale_label()
+
     def add_file(self):
         files = filedialog.askopenfilenames(
             title="Select PSD Files",
@@ -167,6 +328,14 @@ class PSDConverterGUI:
         self.progress_var.set(0)
         self.status_text.delete(1.0, tk.END)
         
+        # Update output settings
+        self.output_settings.format = self.format_var.get()
+        self.output_settings.quality = self.quality_var.get()
+        self.output_settings.scale = self.scale_var.get()
+        self.output_settings.lossless = self.lossless_var.get()
+        self.output_settings.optimize = self.optimize_var.get()
+        self.output_settings.detailed_output = self.detailed_output_var.get()
+        
         total_files = 0
         for path in self.source_paths:
             if os.path.isfile(path):
@@ -188,7 +357,7 @@ class PSDConverterGUI:
                 if source_path.lower().endswith(".psd"):
                     self.log_message(f"Processing: {source_path}")
                     creation_date = get_file_creation_date_str(source_path)
-                    if convert_psd_to_image(source_path, output_dir, self.format_var.get(), creation_date):
+                    if convert_psd_to_image(source_path, output_dir, self.output_settings, creation_date):
                         successful_conversions += 1
                     processed_files += 1
                     self.progress_var.set((processed_files / total_files) * 100)
@@ -199,7 +368,7 @@ class PSDConverterGUI:
                             full_path = os.path.join(root, file)
                             self.log_message(f"Processing: {full_path}")
                             creation_date = get_file_creation_date_str(full_path)
-                            if convert_psd_to_image(full_path, output_dir, self.format_var.get(), creation_date):
+                            if convert_psd_to_image(full_path, output_dir, self.output_settings, creation_date):
                                 successful_conversions += 1
                             processed_files += 1
                             self.progress_var.set((processed_files / total_files) * 100)
