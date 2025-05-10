@@ -131,60 +131,77 @@ class PSDConverterGUI:
             borderwidth=0)
 
     def _create_widgets(self):
-        # Create main frame
+        # Create main frame with padding
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
+        # Create two columns directly in the main frame
+        left_column = ttk.Frame(main_frame)
+        left_column.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+        
+        right_column = ttk.Frame(main_frame)
+        right_column.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0))
+        
         # Source paths section
-        self._create_source_section(main_frame)
+        self._create_source_section(left_column)
         
         # Output settings section
-        self._create_output_section(main_frame)
+        self._create_output_section(left_column)
         
         # Progress section
-        self._create_progress_section(main_frame)
+        self._create_progress_section(right_column)
         
-        # Control buttons
+        # Control buttons - now in a fixed position at the bottom
         self._create_control_buttons(main_frame)
 
     def _create_source_section(self, parent):
         source_frame = ttk.LabelFrame(parent, text="Source Files/Folders")
-        source_frame.pack(fill=tk.X, pady=5)
+        source_frame.pack(fill=tk.X, pady=5, padx=5)
         
-        self.source_listbox = tk.Listbox(source_frame, height=5,
+        # Create a frame for the listbox and buttons
+        listbox_frame = ttk.Frame(source_frame)
+        listbox_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Configure listbox with scrollbar
+        listbox_scrollbar = ttk.Scrollbar(listbox_frame)
+        listbox_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        self.source_listbox = tk.Listbox(listbox_frame, height=5,
             bg=COLORS['listbox'],
             fg=COLORS['fg'],
             selectbackground=COLORS['accent'],
-            selectforeground=COLORS['fg'])
-        self.source_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+            selectforeground=COLORS['fg'],
+            yscrollcommand=listbox_scrollbar.set)
+        self.source_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        listbox_scrollbar.config(command=self.source_listbox.yview)
         
+        # Buttons frame
         source_buttons_frame = ttk.Frame(source_frame)
-        source_buttons_frame.pack(side=tk.RIGHT, padx=5, pady=5)
+        source_buttons_frame.pack(fill=tk.X, padx=5, pady=5)
         
-        ttk.Button(source_buttons_frame, text="Add File", command=self.add_file).pack(pady=2)
-        ttk.Button(source_buttons_frame, text="Add Folder", command=self.add_folder).pack(pady=2)
-        ttk.Button(source_buttons_frame, text="Remove", command=self.remove_source).pack(pady=2)
+        ttk.Button(source_buttons_frame, text="Add File", command=self.add_file).pack(side=tk.LEFT, padx=2)
+        ttk.Button(source_buttons_frame, text="Add Folder", command=self.add_folder).pack(side=tk.LEFT, padx=2)
+        ttk.Button(source_buttons_frame, text="Remove", command=self.remove_source).pack(side=tk.LEFT, padx=2)
 
     def _create_output_section(self, parent):
         output_frame = ttk.LabelFrame(parent, text="Output Settings")
-        output_frame.pack(fill=tk.X, pady=5)
+        output_frame.pack(fill=tk.X, pady=5, padx=5)
         
         # Output directory
-        ttk.Label(output_frame, text="Output Directory:").pack(anchor=tk.W, padx=5)
-        output_dir_frame = ttk.Frame(output_frame)
-        output_dir_frame.pack(fill=tk.X, padx=5, pady=2)
+        dir_frame = ttk.Frame(output_frame)
+        dir_frame.pack(fill=tk.X, padx=5, pady=2)
+        ttk.Label(dir_frame, text="Output Directory:").pack(side=tk.LEFT)
         
         self.output_dir_var = tk.StringVar()
-        self.output_dir_entry = ttk.Entry(output_dir_frame, textvariable=self.output_dir_var)
-        self.output_dir_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Button(output_dir_frame, text="Browse", command=self.select_output_dir).pack(side=tk.RIGHT, padx=5)
+        self.output_dir_entry = ttk.Entry(dir_frame, textvariable=self.output_dir_var)
+        self.output_dir_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        ttk.Button(dir_frame, text="Browse", command=self.select_output_dir).pack(side=tk.RIGHT)
         
         # Format settings
         format_frame = ttk.Frame(output_frame)
         format_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Format selection
         ttk.Label(format_frame, text="Format:").pack(side=tk.LEFT)
+        
         self.format_var = tk.StringVar(value="png")
         formats = ["png", "jpg", "webp", "bmp", "tiff"]
         format_combo = ttk.Combobox(format_frame, textvariable=self.format_var, values=formats, state="readonly", width=10)
@@ -195,10 +212,11 @@ class PSDConverterGUI:
         quality_frame = ttk.Frame(output_frame)
         quality_frame.pack(fill=tk.X, padx=5, pady=5)
         ttk.Label(quality_frame, text="Quality:").pack(side=tk.LEFT)
+        
         self.quality_var = tk.IntVar(value=90)
         quality_scale = ttk.Scale(quality_frame, from_=1, to=100, orient=tk.HORIZONTAL, 
                                 variable=self.quality_var, length=200)
-        quality_scale.pack(side=tk.LEFT, padx=5)
+        quality_scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         self.quality_label = ttk.Label(quality_frame, text="90%")
         self.quality_label.pack(side=tk.LEFT)
         quality_scale.bind('<Motion>', self._update_quality_label)
@@ -207,15 +225,16 @@ class PSDConverterGUI:
         scale_frame = ttk.Frame(output_frame)
         scale_frame.pack(fill=tk.X, padx=5, pady=5)
         ttk.Label(scale_frame, text="Scale:").pack(side=tk.LEFT)
+        
         self.scale_var = tk.IntVar(value=100)
         scale_scale = ttk.Scale(scale_frame, from_=1, to=200, orient=tk.HORIZONTAL,
                               variable=self.scale_var, length=200)
-        scale_scale.pack(side=tk.LEFT, padx=5)
+        scale_scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         self.scale_label = ttk.Label(scale_frame, text="100%")
         self.scale_label.pack(side=tk.LEFT)
         scale_scale.bind('<Motion>', self._update_scale_label)
         
-        # Add reset scale button
+        # Reset scale button
         ttk.Button(scale_frame, text="Reset Scale", command=self._reset_scale).pack(side=tk.LEFT, padx=5)
         
         # Additional options
@@ -229,27 +248,45 @@ class PSDConverterGUI:
         ttk.Checkbutton(options_frame, text="Lossless", variable=self.lossless_var).pack(side=tk.LEFT, padx=5)
         ttk.Checkbutton(options_frame, text="Optimize", variable=self.optimize_var).pack(side=tk.LEFT, padx=5)
         ttk.Checkbutton(options_frame, text="Detailed Output", variable=self.detailed_output_var).pack(side=tk.LEFT, padx=5)
+        
+        # Add Start Conversion button under output settings
+        ttk.Button(output_frame, text="Start Conversion", command=self.start_conversion).pack(fill=tk.X, padx=5, pady=10)
 
     def _create_progress_section(self, parent):
         progress_frame = ttk.LabelFrame(parent, text="Progress")
-        progress_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        progress_frame.pack(fill=tk.BOTH, expand=True, pady=5, padx=5)
         
+        # Progress bar at the top
         self.progress_var = tk.DoubleVar()
         self.progress_bar = ttk.Progressbar(progress_frame, variable=self.progress_var, maximum=100)
         self.progress_bar.pack(fill=tk.X, padx=5, pady=5)
         
-        self.status_text = tk.Text(progress_frame, height=10, wrap=tk.WORD,
+        # Status text with scrollbar
+        status_frame = ttk.Frame(progress_frame)
+        status_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        text_scrollbar = ttk.Scrollbar(status_frame)
+        text_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        self.status_text = tk.Text(status_frame, height=20, wrap=tk.WORD,
             bg=COLORS['text'],
             fg=COLORS['fg'],
-            insertbackground=COLORS['fg'])
-        self.status_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+            insertbackground=COLORS['fg'],
+            yscrollcommand=text_scrollbar.set)
+        self.status_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        text_scrollbar.config(command=self.status_text.yview)
 
     def _create_control_buttons(self, parent):
+        # Create a frame for the buttons at the bottom
         control_frame = ttk.Frame(parent)
-        control_frame.pack(fill=tk.X, pady=10)
+        control_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10)
         
-        ttk.Button(control_frame, text="Start Conversion", command=self.start_conversion).pack(side=tk.RIGHT, padx=5)
-        ttk.Button(control_frame, text="Clear All", command=self.clear_all).pack(side=tk.RIGHT, padx=5)
+        # Create a frame for the buttons with fixed height
+        button_container = ttk.Frame(control_frame)
+        button_container.pack(fill=tk.X, padx=5)
+        
+        # Only keep Clear All button at the bottom
+        ttk.Button(button_container, text="Clear All", command=self.clear_all).pack(side=tk.RIGHT, padx=5)
 
     def _on_format_change(self, event=None):
         format = self.format_var.get()
@@ -297,9 +334,14 @@ class PSDConverterGUI:
             self.output_dir_var.set(directory)
     
     def log_message(self, message):
+        """Log a message to both the status text and console if detailed output is enabled"""
         self.status_text.insert(tk.END, message + "\n")
         self.status_text.see(tk.END)
         self.root.update()
+        
+        # If detailed output is enabled, also print to console
+        if hasattr(self, 'output_settings') and self.output_settings.detailed_output:
+            print(message)
     
     def clear_all(self):
         self.source_paths.clear()
@@ -336,6 +378,16 @@ class PSDConverterGUI:
         self.output_settings.optimize = self.optimize_var.get()
         self.output_settings.detailed_output = self.detailed_output_var.get()
         
+        # Log initial settings if detailed output is enabled
+        if self.output_settings.detailed_output:
+            self.log_message("\nConversion Settings:")
+            self.log_message(f"Format: {self.output_settings.format.upper()}")
+            self.log_message(f"Quality: {self.output_settings.quality}%")
+            self.log_message(f"Scale: {self.output_settings.scale}%")
+            self.log_message(f"Lossless: {self.output_settings.lossless}")
+            self.log_message(f"Optimize: {self.output_settings.optimize}")
+            self.log_message("-" * 30)
+        
         total_files = 0
         for path in self.source_paths:
             if os.path.isfile(path):
@@ -355,7 +407,7 @@ class PSDConverterGUI:
         for source_path in self.source_paths:
             if os.path.isfile(source_path):
                 if source_path.lower().endswith(".psd"):
-                    self.log_message(f"Processing: {source_path}")
+                    self.log_message(f"\nProcessing: {source_path}")
                     creation_date = get_file_creation_date_str(source_path)
                     if convert_psd_to_image(source_path, output_dir, self.output_settings, creation_date):
                         successful_conversions += 1
@@ -366,7 +418,7 @@ class PSDConverterGUI:
                     for file in files:
                         if file.lower().endswith(".psd"):
                             full_path = os.path.join(root, file)
-                            self.log_message(f"Processing: {full_path}")
+                            self.log_message(f"\nProcessing: {full_path}")
                             creation_date = get_file_creation_date_str(full_path)
                             if convert_psd_to_image(full_path, output_dir, self.output_settings, creation_date):
                                 successful_conversions += 1
