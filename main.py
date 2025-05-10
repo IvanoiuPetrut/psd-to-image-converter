@@ -18,21 +18,34 @@ from dateutil import parser as date_parser # For robust date string parsing
 #     "/Users/yourname/Desktop/Old_PSDs",
 #     "/Users/yourname/Downloads/single_file.psd"
 # ]
+
+#  "D:/For linux hdd/Art/My art/2019 - Digital/400 Dynamic Gesture",
+#     "D:/For linux hdd/Art/My art/2019 - Digital/Gesture",
+#     "D:/For linux hdd/Art/My art/2019 - Digital/Landscape",
+#     "D:/For linux hdd/Art/My art/2019 - Digital/Portrait",
+#     "D:/For linux hdd/Art/My art/2019 - Digital/Random",
+#     "D:/For linux hdd/Art/My art/2020 - Digital",
+#     "D:/For linux hdd/Art/My art/2021"
+#     "D:/For linux hdd/Art/My art/2022"
+#     "D:/For linux hdd/Art/My art/2023 - PSD"
+#     "D:/For linux hdd/Art/My art/2024 - PSD"
+#     "D:/Art/2025"
+
 source_file_paths = [
     # Add your source folder paths or specific .psd file paths here
     # e.g., "C:/Users/YourUser/Pictures/MyPSDs",
     #       "/mnt/c/Users/YourUser/Documents/PhotoshopFiles"
-    "D:/For linux hdd/Art/My art/2019 - Digital/400 Dynamic Gesture",
-    "D:/For linux hdd/Art/My art/2019 - Digital/Gesture",
-    "D:/For linux hdd/Art/My art/2019 - Digital/Landscape",
-    "D:/For linux hdd/Art/My art/2019 - Digital/Portrait",
-    "D:/For linux hdd/Art/My art/2019 - Digital/Random",
-    "D:/For linux hdd/Art/My art/2020 - Digital",
-    "D:/For linux hdd/Art/My art/2021"
-    "D:/For linux hdd/Art/My art/2022"
-    "D:/For linux hdd/Art/My art/2023 - PSD"
-    "D:/For linux hdd/Art/My art/2024 - PSD"
-    "D:/Art/2025"
+    # "D:/For linux hdd/Art/My art/2019 - Digital/400 Dynamic Gesture",
+    # "D:/For linux hdd/Art/My art/2019 - Digital/Gesture",
+    # "D:/For linux hdd/Art/My art/2019 - Digital/Landscape",
+    # "D:/For linux hdd/Art/My art/2019 - Digital/Portrait",
+    # "D:/For linux hdd/Art/My art/2019 - Digital/Random",
+    # "D:/For linux hdd/Art/My art/2020 - Digital",
+    "D:/For linux hdd/Art/My art/2021",
+    "D:/For linux hdd/Art/My art/2022",
+    "D:/For linux hdd/Art/My art/2023 - PSD",
+    "D:/For linux hdd/Art/My art/2024 - PSD",
+    # "D:/Art/2025"
 ]
 
 # Directory where converted files will be saved.
