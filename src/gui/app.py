@@ -1,38 +1,25 @@
+"""Main GUI application for PSD to Image Converter."""
+
+import os
+import sys
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-import os
-from main import convert_psd_to_image, get_file_creation_date_str, ensure_dependencies
 from PIL import Image, ImageTk
 
-# Color scheme for dark theme
-COLORS = {
-    'bg': '#1e1e1e',
-    'fg': '#e0e0e0',
-    'accent': '#007acc',
-    'button': '#2d2d2d',
-    'button_hover': '#3d3d3d',
-    'entry': '#2d2d2d',
-    'listbox': '#2d2d2d',
-    'text': '#2d2d2d',
-    'progress': '#007acc',
-    'border': '#2d2d2d'
-}
+# Add the src directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-class OutputSettings:
-    def __init__(self):
-        self.format = "png"
-        self.quality = 90
-        self.scale = 100
-        self.lossless = False
-        self.optimize = True
-        self.detailed_output = False
+from config.settings import COLORS, DEFAULT_OUTPUT_SETTINGS, SUPPORTED_FORMATS, APP_TITLE, APP_GEOMETRY
+from core.converter import OutputSettings, convert_psd_to_image
+from utils.metadata import get_file_creation_date_str
+from utils.dependencies import ensure_dependencies
 
 class PSDConverterGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("PSD to Image Converter")
-        self.root.geometry("800x600")
-        self.output_settings = OutputSettings()
+        self.root.title(APP_TITLE)
+        self.root.geometry(APP_GEOMETRY)
+        self.output_settings = OutputSettings(**DEFAULT_OUTPUT_SETTINGS)
         
         # Configure root window background
         self.root.configure(bg=COLORS['bg'])
@@ -203,8 +190,7 @@ class PSDConverterGUI:
         ttk.Label(format_frame, text="Format:").pack(side=tk.LEFT)
         
         self.format_var = tk.StringVar(value="png")
-        formats = ["png", "jpg", "webp", "bmp", "tiff"]
-        format_combo = ttk.Combobox(format_frame, textvariable=self.format_var, values=formats, state="readonly", width=10)
+        format_combo = ttk.Combobox(format_frame, textvariable=self.format_var, values=SUPPORTED_FORMATS, state="readonly", width=10)
         format_combo.pack(side=tk.LEFT, padx=5)
         format_combo.bind('<<ComboboxSelected>>', self._on_format_change)
         
@@ -339,8 +325,7 @@ class PSDConverterGUI:
         self.status_text.see(tk.END)
         self.root.update()
         
-        # If detailed output is enabled, also print to console
-        if hasattr(self, 'output_settings') and self.output_settings.detailed_output:
+        if self.output_settings.detailed_output:
             print(message)
     
     def clear_all(self):
